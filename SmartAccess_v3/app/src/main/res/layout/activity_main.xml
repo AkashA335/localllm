@@ -19,18 +19,6 @@
         android:layout_marginTop="16dp"
         android:layout_marginHorizontal="16dp"/>
 
-    <Button
-        android:id="@+id/buttonUploadLog"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="Upload Log File"
-        android:enabled="false"
-        app:layout_constraintTop_toBottomOf="@id/buttonLoadModel"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="8dp"
-        android:layout_marginHorizontal="16dp"/>
-
     <EditText
         android:id="@+id/editTextInput"
         android:layout_width="0dp"
@@ -38,7 +26,7 @@
         android:hint="Enter new timestamp &amp; location"
         android:imeOptions="actionDone"
         android:inputType="text"
-        app:layout_constraintTop_toBottomOf="@id/buttonUploadLog"
+        app:layout_constraintTop_toBottomOf="@id/buttonLoadModel"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="8dp"

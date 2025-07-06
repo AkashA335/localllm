@@ -20,9 +20,26 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private val llmw = LLMW()
-    private var uploadedLogs: String = ""
     private var modelLoaded = false
-    private var logContextLoaded = false
+
+    private val accessSummary = """
+        Access summary for past 10 days:
+
+        Date: 2025-08-01 to 2025-08-10  
+        Pattern observed:
+
+        - Morning entry at Main Gate around 09:00 AM daily.
+        - 9th Floor Office entered at ~09:03 AM, exited at ~01:00 PM.
+        - Mid-day exit from Main Gate around ~01:02 PM.
+        - 10th Floor Office entered at ~01:08 PM, exited at ~02:00 PM.
+        - Afternoon re-entry via Main Gate ~02:06 PM.
+        - 9th Floor Office re-entered ~02:08 PM, exited at ~05:02 PM.
+        - Evening exit from Main Gate ~05:05 PM.
+        - No deviations observed in sequence or timing.
+        - Access follows a consistent routine: 9th → exit → 10th → re-entry → 9th → exit.
+
+        Use this as reference to decide future access attempts.
+    """.trimIndent()
 
     private val modelPickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
@@ -34,67 +51,13 @@ class MainActivity : AppCompatActivity() {
                     withContext(Dispatchers.Main) {
                         modelLoaded = true
                         Toast.makeText(this@MainActivity, "✅ Model loaded successfully!", Toast.LENGTH_SHORT).show()
-                        binding.buttonUploadLog.isEnabled = true
+                        binding.textView.text = "📊 Model ready. No need to upload logs.\n🎯 Ready for analysis.\n"
+                        binding.buttonAnalyze.isEnabled = true
+                        binding.editTextInput.isEnabled = true
                     }
                 } catch (e: Exception) {
                     withContext(Dispatchers.Main) {
                         Toast.makeText(this@MainActivity, "❌ Model load failed: ${e.message}", Toast.LENGTH_LONG).show()
-                    }
-                }
-            }
-        }
-    }
-
-    private val logPickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val uri = result.data?.data ?: return@registerForActivityResult
-            lifecycleScope.launch(Dispatchers.IO) {
-                try {
-                    uploadedLogs = readTextFromUri(uri)
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(this@MainActivity, "📄 Log uploaded!", Toast.LENGTH_SHORT).show()
-                        binding.textView.text = "📊 Feeding logs to model...\n"
-                    }
-
-                    val logsByDay = uploadedLogs.lines().filter { it.isNotBlank() }
-                        .groupBy { it.substringBefore(" ") }  // group by date
-                        .toSortedMap()
-                        .entries.take(10)
-
-                    for ((index, entry) in logsByDay.withIndex()) {
-                        val dailyLog = entry.value.joinToString("\n")
-                        val prompt = """
-                            <|user|>
-                            Day ${index + 1} Logs:
-                            $dailyLog
-                            </s>
-                            <|assistant|>
-                            Noted.
-                            </s>
-                        """.trimIndent()
-
-                        llmw.send(prompt, object : LLMW.MessageHandler {
-                            override fun h(msg: String) {
-                                // optional logging
-                            }
-                        })
-
-                        withContext(Dispatchers.Main) {
-                            binding.textView.append("✅ Day ${index + 1} sent\n")
-                        }
-                        delay(500)
-                    }
-
-                    withContext(Dispatchers.Main) {
-                        logContextLoaded = true
-                        binding.textView.append("🎯 Ready for analysis\n")
-                        binding.buttonAnalyze.isEnabled = true
-                        binding.editTextInput.isEnabled = true
-                    }
-
-                } catch (e: Exception) {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(this@MainActivity, "❌ Failed to read log: ${e.message}", Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -112,7 +75,6 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        binding.buttonUploadLog.isEnabled = false
         binding.buttonAnalyze.isEnabled = false
         binding.editTextInput.isEnabled = false
 
@@ -124,44 +86,24 @@ class MainActivity : AppCompatActivity() {
             modelPickerLauncher.launch(intent)
         }
 
-        binding.buttonUploadLog.setOnClickListener {
-            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                addCategory(Intent.CATEGORY_OPENABLE)
-                type = "text/plain"
-            }
-            logPickerLauncher.launch(intent)
-        }
-
         binding.buttonAnalyze.setOnClickListener {
             val inputText = binding.editTextInput.text.toString().trim()
 
             when {
                 !modelLoaded -> Toast.makeText(this, "Please load the model first.", Toast.LENGTH_SHORT).show()
-                uploadedLogs.isEmpty() -> Toast.makeText(this, "Please upload the log file first.", Toast.LENGTH_SHORT).show()
-                !logContextLoaded -> Toast.makeText(this, "Log context not yet processed. Please wait.", Toast.LENGTH_SHORT).show()
                 inputText.isEmpty() -> Toast.makeText(this, "Enter timestamp and location", Toast.LENGTH_SHORT).show()
                 else -> {
                     val prompt = """
-                <|system|>
-                You are an anomaly detection assistant for secure access control.
-                Analyze access attempts based on prior patterns, especially:
-                - Time of day (normal hours: 08:00 AM to 06:00 PM)
-                - Entry/exit sequences
-                - Location transition frequency
-                - Any abnormal behavior
+                        You are an AI assistant for secure facility access.
 
-                If the attempt deviates significantly from known patterns, deny access.
-                </s>
-                <|user|>
-                New access attempt:
-                $inputText
+                        $accessSummary
 
-                Based on previous behavior, reply with only:
-                Access Granted
-                Access Denied
-                </s>
-                <|assistant|>
-            """.trimIndent()
+                        New access attempt:
+                        $inputText
+
+                        Based on previous behavior, Reply strictly with only one of the following words: Access Granted or Access Denied. Do not add any other words.
+
+                    """.trimIndent()
 
                     binding.textView.append("\n🔎 Analyzing new event...\n")
 
@@ -179,7 +121,7 @@ class MainActivity : AppCompatActivity() {
                                 val lower = responseBuffer.toString().lowercase()
                                 if (lower.contains("access granted") || lower.contains("access denied")) {
                                     isFinished = true
-                                    android.util.Log.d("AI_RESPONSE", "Final Response: ${responseBuffer.toString()}")
+                                    android.util.Log.d("AI_RESPONSE", "Final Response: $responseBuffer")
                                 }
                             }
                         }
@@ -187,7 +129,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-
 
         binding.editTextInput.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
@@ -213,11 +154,5 @@ class MainActivity : AppCompatActivity() {
             }
         }
         return destFile.absolutePath
-    }
-
-    private fun readTextFromUri(uri: Uri): String {
-        contentResolver.openInputStream(uri)?.use { inputStream ->
-            return BufferedReader(InputStreamReader(inputStream)).readText()
-        } ?: throw IOException("Unable to open file")
     }
 }
