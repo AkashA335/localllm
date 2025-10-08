@@ -1,0 +1,21 @@
+name: Print Names
+
+on:
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  call_fetch_workflow:
+    uses: ./.github/workflows/fetch-and-parse.yml
+    id: fetch_names
+
+  print_names:
+    runs-on: ubuntu-latest
+    needs: call_fetch_workflow
+    steps:
+      - name: Print Each Name
+        run: |
+          IFS=',' read -r -a array <<< "${{ needs.call_fetch_workflow.outputs.names }}"
+          echo "Printing names:"
+          for name in "${array[@]}"; do
+            echo "Name: $name"
+          done
