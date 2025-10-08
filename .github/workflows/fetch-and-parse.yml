@@ -15,7 +15,7 @@ jobs:
 
       - name: Fetch CSV from Google Sheets
         run: |
-          curl -s -o names.csv "https://docs.google.com/spreadsheets/d/e/2PACX-1vSoq7iUaBZd2w0a-JUi9pxY4mr7UdAlMi2xiqoyicY4V80yqc4CghD-Iaci3euI662STnCUD74O3ZL1/pub?output=csv"
+          curl -L -s -o names.csv "https://docs.google.com/spreadsheets/d/e/2PACX-1vSoq7iUaBZd2w0a-JUi9pxY4mr7UdAlMi2xiqoyicY4V80yqc4CghD-Iaci3euI662STnCUD74O3ZL1/pub?output=csv"
           cat names.csv
 
       - name: Parse CSV
