@@ -11,9 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: call_fetch_workflow
     steps:
+      - name: Debug Output
+        run: |
+          echo "Raw job output: '${{ needs.call_fetch_workflow.outputs.names }}'"
+
       - name: Print Each Name
         run: |
-          echo "Job output: ${{ needs.call_fetch_workflow.outputs.names }}"
           IFS=',' read -r -a array <<< "${{ needs.call_fetch_workflow.outputs.names }}"
           echo "Printing names:"
           for name in "${array[@]}"; do
