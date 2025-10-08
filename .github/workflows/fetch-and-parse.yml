@@ -1,0 +1,29 @@
+name: Fetch and Parse Names
+
+on:
+  workflow_call: # This allows this workflow to be called by another workflow
+
+jobs:
+  fetch_and_parse:
+    runs-on: ubuntu-latest
+    outputs:
+      names: ${{ steps.parse_csv.outputs.names }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Fetch CSV from Google Sheets
+        run: |
+          curl -s -o names.csv "https://docs.google.com/spreadsheets/d/e/2PACX-1vSoq7iUaBZd2w0a-JUi9pxY4mr7UdAlMi2xiqoyicY4V80yqc4CghD-Iaci3euI662STnCUD74O3ZL1/pub?output=csv"
+          cat names.csv
+
+      - name: Parse CSV
+        id: parse_csv
+        run: |
+          csv_content=$(cat names.csv | tr -d '\r' | tr ',' '\n')
+          echo "Parsed Names:"
+          echo "$csv_content"
+          # convert back to comma-separated for output
+          names=$(echo "$csv_content" | paste -sd "," -)
+          echo "names=$names" >> $GITHUB_OUTPUT
