@@ -6,7 +6,7 @@ on:
 jobs:
   call_fetch_workflow:
     uses: ./.github/workflows/fetch-and-parse.yml
-    id: fetch_names
+    # id removed
 
   print_names:
     runs-on: ubuntu-latest
