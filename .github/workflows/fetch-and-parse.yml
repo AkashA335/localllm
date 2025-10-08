@@ -1,7 +1,11 @@
 name: Fetch and Parse Names
 
 on:
-  workflow_call: # allows this workflow to be called and pass outputs
+  workflow_call:
+    outputs:
+      names:
+        description: "Comma-separated names from CSV"
+        value: ${{ jobs.fetch_and_parse.outputs.names }}
 
 jobs:
   fetch_and_parse:
@@ -21,9 +25,7 @@ jobs:
       - name: Parse CSV
         id: parse_csv
         run: |
-          # Convert CSV to single-line comma-separated string
           csv_content=$(cat names.csv | tr -d '\r' | tr '\n' ',')
-          # Remove trailing comma
           names=${csv_content%,}
           echo "Parsed names: $names"
           echo "names=$names" >> $GITHUB_OUTPUT
