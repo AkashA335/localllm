@@ -1,7 +1,7 @@
 name: Fetch and Parse Names
 
 on:
-  workflow_call: # must be workflow_call for another workflow to use outputs
+  workflow_call: # allows this workflow to be called and pass outputs
 
 jobs:
   fetch_and_parse:
